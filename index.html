@@ -8,16 +8,41 @@
 <body>
 
   <model-viewer
-      src="couch2.glb"
+      id="main-viewer"
       ar
       ar-modes="webxr scene-viewer quick-look"
       camera-controls
+      autoplay
       shadow-intensity="1"
-      style="width: 100%; height: 500px;">
+      style="width: 100%; height: 100vh;">
+      <!-- The button is still here, but the main purpose is auto-launching AR -->
       <button slot="ar-button" style="background-color: white; border-radius: 4px; border: 1px solid black; position: absolute; bottom: 16px; right: 16px; ">
           View in your room
       </button>
   </model-viewer>
+
+  <script>
+    const modelViewer = document.querySelector('#main-viewer');
+    
+    // Get model URLs from the page's address (query parameters)
+    const params = new URLSearchParams(window.location.search);
+    const glbSrc = params.get('glb');
+    const usdzSrc = params.get('usdz');
+
+    // Set the model sources if they were provided in the URL
+    if (glbSrc) {
+        modelViewer.src = glbSrc;
+    }
+    if (usdzSrc) {
+        modelViewer.setAttribute('ios-src', usdzSrc);
+    }
+
+    // This is the key part: we immediately try to activate AR
+    // This will bring up the camera view directly.
+    modelViewer.addEventListener('load', () => {
+        modelViewer.activateAR();
+    }, { once: true });
+  </script>
 
 </body>
 </html>
