@@ -15,6 +15,8 @@
       ar-modes="webxr scene-viewer quick-look"
       camera-controls
       shadow-intensity="1"
+      loading="eager"
+      reveal="auto"
       style="width: 100%; height: 500px;">
       <!-- The button is still here, but the main purpose is auto-launching AR -->
       <button slot="ar-button" id="ar-button" style="background-color: white; border-radius: 4px; border: 1px solid black; position: absolute; bottom: 16px; right: 16px; padding: 10px 15px; cursor: pointer; font-size: 14px; z-index: 100;">
@@ -34,25 +36,25 @@
     }
     
     // Register service worker for caching
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sasa_interiors_3d_files/sw.js').then(registration => {
-            debugLog('Service Worker registered');
+    // if ('serviceWorker' in navigator) {
+    //     navigator.serviceWorker.register('/sasa_interiors_3d_files/sw.js').then(registration => {
+    //         debugLog('Service Worker registered');
             
-            // Function to pre-cache model files
-            window.preCacheModels = function(glbUrl, usdzUrl) {
-                const urls = [glbUrl, usdzUrl].filter(Boolean);
-                if (urls.length > 0) {
-                    navigator.serviceWorker.controller?.postMessage({
-                        action: 'CACHE_URLS',
-                        urls: urls
-                    });
-                    debugLog('Requested caching of ' + urls.length + ' model files');
-                }
-            };
-        }).catch(error => {
-            debugLog('Service Worker registration failed: ' + error);
-        });
-    }
+    //         // Function to pre-cache model files
+    //         window.preCacheModels = function(glbUrl, usdzUrl) {
+    //             const urls = [glbUrl, usdzUrl].filter(Boolean);
+    //             if (urls.length > 0) {
+    //                 navigator.serviceWorker.controller?.postMessage({
+    //                     action: 'CACHE_URLS',
+    //                     urls: urls
+    //                 });
+    //                 debugLog('Requested caching of ' + urls.length + ' model files');
+    //             }
+    //         };
+    //     }).catch(error => {
+    //         debugLog('Service Worker registration failed: ' + error);
+    //     });
+    // }
     
     // Get model URLs from the page's address (query parameters)
     const params = new URLSearchParams(window.location.search);
@@ -68,9 +70,9 @@
     if (glbSrc) {
         modelViewer.src = glbSrc;
     }
-    if (usdzSrc) {
-        modelViewer.setAttribute('ios-src', usdzSrc);
-    }
+    // if (usdzSrc) {
+    //     modelViewer.setAttribute('ios-src', usdzSrc);
+    // }
 
     // If this is preload mode, just load models to cache them
     if (isPreload) {
@@ -80,60 +82,72 @@
         // Don't continue with AR setup
     } else {
 
-    // Make AR button more responsive and add debugging
-    if (glbSrc && usdzSrc) {
+        // Make AR button more responsive and add debugging
+    if (glbSrc) {
         let arAttempted = false;
         
-        // Wait for model to be fully ready for AR
-        modelViewer.addEventListener('load', () => {
-            debugLog('Model visually loaded, waiting for AR readiness...');
-        });
+        // Show loading progress
+        debugLog('Starting model load...');
         
-        // Use a better event that waits for AR to be ready
-        modelViewer.addEventListener('model-visibility', () => {
-            debugLog('Model visibility changed');
-        });
-        
-        // Try multiple approaches to detect when AR is ready
+        // Try to activate AR as soon as possible
         function attemptARActivation() {
             if (arAttempted) return;
             
-            // Check if model is loaded and AR is available
-            if (modelViewer.loaded && modelViewer.canActivateAR) {
+            debugLog('Checking AR readiness...');
+            
+            // Try to activate AR immediately
+            try {
                 arAttempted = true;
-                debugLog('Model fully ready, attempting AR activation...');
+                debugLog('Attempting AR activation...');
                 const arButton = document.querySelector('#ar-button');
                 if (arButton) {
                     debugLog('AR button found, clicking...');
                     arButton.click();
                 } else {
-                    debugLog('AR button not found');
+                    debugLog('AR button not found, trying direct activation...');
+                    modelViewer.activateAR();
                 }
-            } else {
-                debugLog('Model not ready yet (loaded: ' + modelViewer.loaded + ', canActivateAR: ' + modelViewer.canActivateAR + ')');
-                // Try again in 2 seconds
-                setTimeout(attemptARActivation, 2000);
+            } catch (error) {
+                debugLog('AR activation failed: ' + error.message);
+                arAttempted = false;
+                // Try again in 1 second
+                setTimeout(attemptARActivation, 1000);
             }
         }
         
-        // Start checking after initial load
+        // Start trying as soon as model starts loading
         modelViewer.addEventListener('load', () => {
-            setTimeout(attemptARActivation, 1000);
+            debugLog('Model loaded, attempting AR...');
+            setTimeout(attemptARActivation, 500);
         }, { once: true });
         
-        // Also add manual click handler with debugging
-        modelViewer.addEventListener('click', (event) => {
-            debugLog('Model viewer clicked');
-        });
+        // Fallback - try every 2 seconds for up to 30 seconds
+        let attempts = 0;
+        const maxAttempts = 15;
+        const fallbackInterval = setInterval(() => {
+            attempts++;
+            if (attempts >= maxAttempts) {
+                clearInterval(fallbackInterval);
+                debugLog('Giving up on auto-AR after 30 seconds');
+                return;
+            }
+            
+            if (!arAttempted) {
+                debugLog('Fallback attempt ' + attempts);
+                attemptARActivation();
+            } else {
+                clearInterval(fallbackInterval);
+            }
+        }, 2000);
         
-                 // Add AR button click handler
-         const arButton = document.querySelector('#ar-button');
-         if (arButton) {
-             arButton.addEventListener('click', () => {
-                 debugLog('AR button clicked manually');
-             });
-         }
-     }
+        // Add AR button click handler for manual activation
+        const arButton = document.querySelector('#ar-button');
+        if (arButton) {
+            arButton.addEventListener('click', () => {
+                debugLog('AR button clicked manually');
+            });
+        }
+    }
     } // Close the else block
   </script>
 
