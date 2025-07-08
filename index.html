@@ -36,11 +36,10 @@
         modelViewer.setAttribute('ios-src', usdzSrc);
     }
 
-    // This is the key part: we immediately try to activate AR
-    // This will bring up the camera view directly.
-    modelViewer.addEventListener('load', () => {
+    // Activate AR immediately when we have the parameters
+    if (glbSrc || usdzSrc) {
         modelViewer.activateAR();
-    }, { once: true });
+    }
   </script>
 
 </body>
