@@ -33,13 +33,36 @@
         debugOutput.scrollTop = debugOutput.scrollHeight;
     }
     
+    // Register service worker for caching
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sasa_interiors_3d_files/sw.js').then(registration => {
+            debugLog('Service Worker registered');
+            
+            // Function to pre-cache model files
+            window.preCacheModels = function(glbUrl, usdzUrl) {
+                const urls = [glbUrl, usdzUrl].filter(Boolean);
+                if (urls.length > 0) {
+                    navigator.serviceWorker.controller?.postMessage({
+                        action: 'CACHE_URLS',
+                        urls: urls
+                    });
+                    debugLog('Requested caching of ' + urls.length + ' model files');
+                }
+            };
+        }).catch(error => {
+            debugLog('Service Worker registration failed: ' + error);
+        });
+    }
+    
     // Get model URLs from the page's address (query parameters)
     const params = new URLSearchParams(window.location.search);
     const glbSrc = params.get('glb');
     const usdzSrc = params.get('usdz');
+    const isPreload = params.get('preload') === 'true';
     
     debugLog('GLB: ' + (glbSrc ? 'Found' : 'Not found'));
     debugLog('USDZ: ' + (usdzSrc ? 'Found' : 'Not found'));
+    debugLog('Preload mode: ' + isPreload);
 
     // Set the model sources if they were provided in the URL
     if (glbSrc) {
@@ -49,27 +72,53 @@
         modelViewer.setAttribute('ios-src', usdzSrc);
     }
 
+    // If this is preload mode, just load models to cache them
+    if (isPreload) {
+        debugLog('Preload mode - caching models only');
+        // Models will be loaded and cached by service worker
+        // No need to show AR button or auto-activate
+        return;
+    }
+
     // Make AR button more responsive and add debugging
     if (glbSrc && usdzSrc) {
         let arAttempted = false;
         
-        // Try to activate AR after model loads
+        // Wait for model to be fully ready for AR
         modelViewer.addEventListener('load', () => {
-            debugLog('Model loaded successfully');
-            if (!arAttempted) {
+            debugLog('Model visually loaded, waiting for AR readiness...');
+        });
+        
+        // Use a better event that waits for AR to be ready
+        modelViewer.addEventListener('model-visibility', () => {
+            debugLog('Model visibility changed');
+        });
+        
+        // Try multiple approaches to detect when AR is ready
+        function attemptARActivation() {
+            if (arAttempted) return;
+            
+            // Check if model is loaded and AR is available
+            if (modelViewer.loaded && modelViewer.canActivateAR) {
                 arAttempted = true;
-                // Longer delay to ensure everything is ready
-                setTimeout(() => {
-                    debugLog('Attempting AR activation...');
-                    const arButton = document.querySelector('#ar-button');
-                    if (arButton) {
-                        debugLog('AR button found, clicking...');
-                        arButton.click();
-                    } else {
-                        debugLog('AR button not found');
-                    }
-                }, 100);
+                debugLog('Model fully ready, attempting AR activation...');
+                const arButton = document.querySelector('#ar-button');
+                if (arButton) {
+                    debugLog('AR button found, clicking...');
+                    arButton.click();
+                } else {
+                    debugLog('AR button not found');
+                }
+            } else {
+                debugLog('Model not ready yet (loaded: ' + modelViewer.loaded + ', canActivateAR: ' + modelViewer.canActivateAR + ')');
+                // Try again in 2 seconds
+                setTimeout(attemptARActivation, 2000);
             }
+        }
+        
+        // Start checking after initial load
+        modelViewer.addEventListener('load', () => {
+            setTimeout(attemptARActivation, 1000);
         }, { once: true });
         
         // Also add manual click handler with debugging
