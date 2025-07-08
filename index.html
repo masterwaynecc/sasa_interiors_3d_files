@@ -36,11 +36,15 @@
         modelViewer.setAttribute('ios-src', usdzSrc);
     }
 
-    // Activate AR immediately when we have the parameters and model-viewer is ready
+    // Activate AR immediately when we have the parameters
     if (glbSrc && usdzSrc) {
-        modelViewer.addEventListener('ready', () => {
-            modelViewer.activateAR();
-        }, { once: true });
+        // Simulate clicking the AR button to preserve user gesture
+        setTimeout(() => {
+            const arButton = modelViewer.querySelector('[slot="ar-button"]');
+            if (arButton) {
+                arButton.click();
+            }
+        }, 100);
     }
   </script>
 
