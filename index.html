@@ -77,8 +77,8 @@
         debugLog('Preload mode - caching models only');
         // Models will be loaded and cached by service worker
         // No need to show AR button or auto-activate
-        return;
-    }
+        // Don't continue with AR setup
+    } else {
 
     // Make AR button more responsive and add debugging
     if (glbSrc && usdzSrc) {
@@ -126,14 +126,15 @@
             debugLog('Model viewer clicked');
         });
         
-        // Add AR button click handler
-        const arButton = document.querySelector('#ar-button');
-        if (arButton) {
-            arButton.addEventListener('click', () => {
-                debugLog('AR button clicked manually');
-            });
-        }
-    }
+                 // Add AR button click handler
+         const arButton = document.querySelector('#ar-button');
+         if (arButton) {
+             arButton.addEventListener('click', () => {
+                 debugLog('AR button clicked manually');
+             });
+         }
+     }
+    } // Close the else block
   </script>
 
 </body>
