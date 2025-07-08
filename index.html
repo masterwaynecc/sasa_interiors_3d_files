@@ -36,9 +36,11 @@
         modelViewer.setAttribute('ios-src', usdzSrc);
     }
 
-    // Activate AR immediately when we have the parameters
-    if (glbSrc || usdzSrc) {
-        modelViewer.activateAR();
+    // Activate AR immediately when we have the parameters and model-viewer is ready
+    if (glbSrc && usdzSrc) {
+        modelViewer.addEventListener('ready', () => {
+            modelViewer.activateAR();
+        }, { once: true });
     }
   </script>
 
