@@ -36,15 +36,14 @@
         modelViewer.setAttribute('ios-src', usdzSrc);
     }
 
-    // Activate AR immediately when we have the parameters
+    // Auto-click AR button only after model is loaded
     if (glbSrc && usdzSrc) {
-        // Simulate clicking the AR button to preserve user gesture
-        setTimeout(() => {
+        modelViewer.addEventListener('load', () => {
             const arButton = modelViewer.querySelector('[slot="ar-button"]');
             if (arButton) {
                 arButton.click();
             }
-        }, 100);
+        }, { once: true });
     }
   </script>
 
